@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Liseuse vocale</title>
+<meta name="description" content="Lit à voix haute les chapitres de ton livre.">
+<meta name="theme-color" content="#F3F4F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11141B" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Liseuse vocale">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : bibliothèque en liste façon sommaire, lecteur en colonne de livre, lecteur audio fixé en bas */
+:root{
+  --bg:#F3F4F6; --page:#FFFFFF; --ink:#1B2130; --muted:#5D6578; --line:#DADDE5;
+  --accent:#3343A8; --accent-ink:#FFFFFF; --mark:#FFE29A; --mark-ink:#1B2130; --sent:#EEF0FA;
+  --ok:#2E7D4F; --warn:#A4471E;
+  --f-read:"Literata", Georgia, "Times New Roman", serif;
+  --f-ui:"IBM Plex Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#11141B; --page:#181C26; --ink:#E4E7EF; --muted:#9AA2B5; --line:#2C3242;
+  --accent:#8D9BFF; --accent-ink:#11141B; --mark:#6B5418; --mark-ink:#FFF4D6; --sent:#1F2536;
+  --ok:#6FCF97; --warn:#F2A07B; color-scheme:dark}}
+
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-ui);-webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+[hidden]{display:none!important}
+.view{max-width:760px;margin:0 auto;padding-block:14px 40px;display:flex;flex-direction:column;gap:16px}
+#reader.view{padding-bottom:170px}
+
+button,select,input,.btn{font:inherit;color:var(--ink)}
+button,.btn{background:var(--page);border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;-webkit-tap-highlight-color:transparent}
+button:hover,.btn:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.ghost{background:transparent;border-color:transparent}
+.icon{width:42px;padding:0}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.btn{position:relative}
+
+/* En-têtes */
+.top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.top h1{font-family:var(--f-read);font-weight:600;font-size:1.6rem;margin:0;text-wrap:balance}
+.top .t{min-width:0;flex:1}
+.top .t small{display:block;color:var(--muted);font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .t b{display:block;font-family:var(--f-read);font-weight:600;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:.82rem;color:var(--muted);min-height:1.2em}
+.status.err{color:var(--warn)}
+
+/* Carte « Reprendre » */
+.resume{background:var(--page);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left;width:100%}
+.resume .meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.resume .eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.resume .name{font-family:var(--f-read);font-size:1.1rem;font-weight:600}
+.resume .sub{font-size:.82rem;color:var(--muted)}
+.resume .go{width:48px;height:48px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.resume .go svg{width:22px;height:22px;fill:currentColor;stroke:none}
+
+.card{background:var(--page);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card h2{margin:0;font-size:1rem}
+.card p{margin:0;color:var(--muted)}
+
+/* Onglets */
+.tabs{display:flex;background:var(--page);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.tabs button{flex:1;border:0;border-radius:9px;min-height:36px;padding:6px 8px;background:transparent;color:var(--muted);font-weight:500}
+.tabs button[aria-selected=true]{background:var(--accent);color:var(--accent-ink)}
+
+/* Sommaire */
+.book{display:flex;flex-direction:column}
+.book>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.book>summary::-webkit-details-marker{display:none}
+.book>summary h3{margin:0;font-family:var(--f-read);font-size:1.2rem;font-weight:600}
+.book>summary .bs{color:var(--muted);font-size:.85rem;flex:1;min-width:0}
+.book>summary .cnt{color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
+.book>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+.book[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
+ol.list{list-style:none;margin:0;padding:0}
+.row{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line);cursor:pointer;width:100%;background:none;border-radius:0;border-left:0;border-right:0;border-top:0;text-align:left;min-height:52px}
+.row:hover{border-color:var(--line);background:var(--sent)}
+.row .num{width:2.2em;flex:none;color:var(--muted);font-variant-numeric:tabular-nums;font-size:.85rem;text-align:right}
+.row .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row .tt b{font-weight:500;overflow-wrap:anywhere}
+.row .tt small{color:var(--muted);font-size:.78rem}
+.chip{font-size:.68rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:var(--accent);color:var(--accent-ink);flex:none}
+.prog{width:44px;height:4px;border-radius:2px;background:var(--line);flex:none;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent)}
+.done{color:var(--ok);font-size:.8rem;font-weight:600;flex:none}
+.del{flex:none}
+.empty{color:var(--muted);text-align:center;padding:24px 8px}
+.files-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Réglages */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.85rem;font-weight:500}
+.field small{color:var(--muted);font-size:.78rem}
+.field input[type=text],.field input[type=password],.field select{width:100%;min-height:42px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.switch input{width:46px;height:28px;accent-color:var(--accent)}
+.range{display:flex;align-items:center;gap:10px}
+.range input{flex:1;accent-color:var(--accent)}
+.range span{font-variant-numeric:tabular-nums;min-width:3.2em;text-align:right}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+textarea{width:100%;min-height:200px;font:15px/1.5 var(--f-read);color:var(--ink);background:var(--page);border:1px solid var(--line);border-radius:12px;padding:12px}
+
+/* Lecteur */
+.pagebox{background:var(--page);border:1px solid var(--line);border-radius:14px;padding:clamp(18px,5vw,48px)}
+.text{font-family:var(--f-read);font-size:var(--fs,1.15rem);line-height:1.75;max-width:65ch;margin:0 auto;overflow-wrap:break-word}
+.text p{margin:0 0 1em}
+.text h2.title{font-size:1.5em;line-height:1.3;margin:0 0 1em;font-weight:600;text-wrap:balance}
+.text h3{font-size:1.15em;margin:1.2em 0 .6em}
+.text .part{text-align:center;letter-spacing:.12em;font-size:.95em;margin:2em 0 .4em;font-weight:600}
+.text .epi{font-style:italic;margin:0 0 .3em 2em;color:var(--muted)}
+.text .epi-attr{margin:0 0 1.6em 2em;color:var(--muted);font-size:.9em}
+.text .off{opacity:.55}
+.text .sep{display:block;width:30%;height:1px;background:var(--line);margin:1.8em auto;border:0}
+.text .section{text-align:center;color:var(--muted);font-style:italic;margin:1.6em 0 .8em}
+.text .end,.text .colophon{text-align:center;color:var(--muted);font-size:.85em;margin:.6em 0}
+.text .end{margin-top:2em}
+.text .tbl{overflow-x:auto;margin:0 0 1em}
+.text table{border-collapse:collapse;font-family:var(--f-ui);font-size:.8em;color:var(--muted)}
+.text td{border:1px solid var(--line);padding:4px 8px}
+.it{font-style:italic}.bd{font-weight:600}
+.s{border-radius:4px;transition:background .15s}
+.s.cur{background:var(--sent)}
+.w{cursor:pointer;border-radius:3px}
+.w.on{background:var(--mark);color:var(--mark-ink);box-shadow:0 0 0 2px var(--mark)}
+
+.player{position:fixed;left:0;right:0;bottom:0;background:var(--page);border-top:1px solid var(--line);z-index:5;
+  padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.pin{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.bar{height:22px;display:flex;align-items:center;cursor:pointer}
+.bar span{flex:1;height:6px;background:var(--line);border-radius:3px;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);width:0}
+.ctrl{display:flex;align-items:center;justify-content:center;gap:12px}
+.ctrl button{width:46px;height:46px;padding:0;border-radius:50%}
+.ctrl .play{width:60px;height:60px}
+.ctrl svg{width:22px;height:22px;fill:currentColor}
+.ctrl .rate{width:auto;min-width:56px;border-radius:99px;padding:0 10px;font-size:.85rem;font-variant-numeric:tabular-nums;height:36px;min-height:36px}
+.pmeta{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:99px;font-size:.85rem;z-index:9;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ================= Bibliothèque ================= -->
+<main id="library" class="view">
+  <div class="top">
+    <h1>Liseuse vocale</h1>
+    <div class="btns">
+      <button class="icon ghost" id="syncBtn" aria-label="Actualiser les chapitres" title="Actualiser les chapitres">
+        <svg class="i" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg></button>
+      <button class="icon ghost" id="settingsBtn" aria-label="Réglages" title="Réglages">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </div>
+  <div class="status" id="status" role="status"></div>
+
+  <div class="card" id="connectCard" hidden>
+    <h2>Connecte ton dépôt GitHub</h2>
+    <p>Ajoute ton jeton d'accès dans les réglages pour voir tous tes chapitres ici. En attendant, tu peux ouvrir des fichiers depuis l'onglet « Mes fichiers ».</p>
+    <div class="btns"><button class="primary" id="connectGo">Ouvrir les réglages</button></div>
+  </div>
+
+  <button class="resume" id="resume" hidden>
+    <span class="meta"><span class="eyebrow">Reprendre</span><span class="name" id="resumeName"></span><span class="sub" id="resumeSub"></span></span>
+    <span class="go"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg></span>
+  </button>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabBooks" aria-selected="true">Livres</button>
+    <button role="tab" id="tabHistory" aria-selected="false">Historique</button>
+    <button role="tab" id="tabFiles" aria-selected="false">Mes fichiers</button>
+  </div>
+
+  <section id="paneBooks"></section>
+  <section id="paneHistory" hidden></section>
+  <section id="paneFiles" hidden>
+    <div class="files-actions">
+      <label class="btn primary">Ajouter un fichier
+        <input type="file" id="fileInput" accept=".txt,.md,.markdown,text/plain,text/markdown" multiple></label>
+      <button id="pasteBtn">Coller du texte</button>
+    </div>
+    <div id="pasteBox" class="field" hidden style="margin-top:12px">
+      <input type="text" id="pasteName" placeholder="Nom (facultatif)">
+      <textarea id="pasteArea" placeholder="Colle ici ton texte…"></textarea>
+      <div class="btns"><button id="pasteCancel">Annuler</button><button class="primary" id="pasteSave">Enregistrer</button></div>
+    </div>
+    <ol class="list" id="filesList" style="margin-top:12px"></ol>
+  </section>
+</main>
+
+<!-- ================= Lecteur ================= -->
+<main id="reader" class="view" hidden>
+  <div class="top">
+    <button class="icon ghost" id="backBtn" aria-label="Retour à la bibliothèque">
+      <svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="t"><small id="rBook"></small><b id="rTitle"></b></div>
+    <button class="icon ghost" id="sizeBtn" aria-label="Taille du texte" title="Taille du texte">
+      <svg class="i" viewBox="0 0 24 24"><path d="M4 18 9 6l5 12M5.6 14h6.8M15 18l3-7 3 7M16 16h4"/></svg></button>
+  </div>
+  <article class="pagebox"><div class="text" id="text"></div></article>
+</main>
+
+<div class="player" id="player" hidden>
+  <div class="pin">
+    <div class="bar" id="bar" title="Aller à cet endroit"><span><i id="barFill"></i></span></div>
+    <div class="ctrl">
+      <button class="rate" id="rateBtn" aria-label="Vitesse">1×</button>
+      <button id="prev" aria-label="Phrase précédente"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="play primary" id="play" aria-label="Lecture"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4v16l13-8z"/></svg></button>
+      <button id="next" aria-label="Phrase suivante"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <button class="rate" id="nextChBtn" aria-label="Chapitre suivant" title="Chapitre suivant">Ch. ›</button>
+    </div>
+    <div class="pmeta"><span id="pos"></span><span id="pct"></span></div>
+  </div>
+</div>
+
+<!-- ================= Réglages ================= -->
+<main id="settings" class="view" hidden>
+  <div class="top">
+    <button class="icon ghost" id="setBack" aria-label="Retour"><svg class="i" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="t"><b>Réglages</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Dépôt GitHub</h2>
+    <div class="two">
+      <div class="field"><label for="owner">Propriétaire</label><input type="text" id="owner" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="field"><label for="repo">Dépôt</label><input type="text" id="repo" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    </div>
+    <div class="field"><label for="branch">Branche</label><input type="text" id="branch" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="field">
+      <label for="token">Jeton d'accès (lecture seule)</label>
+      <input type="password" id="token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_…">
+      <small id="tokenHelp">Le jeton reste uniquement sur cet appareil. Il n'est envoyé qu'à GitHub.</small>
+    </div>
+    <div class="btns">
+      <button class="primary" id="saveRepo">Tester et enregistrer</button>
+      <button id="forgetToken">Oublier le jeton</button>
+    </div>
+    <div class="status" id="repoStatus" role="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Lecture</h2>
+    <div class="field"><label for="voice">Voix</label><select id="voice"></select>
+      <small>Sur iPhone, de meilleures voix se téléchargent dans Réglages → Accessibilité → Contenu énoncé → Voix.</small></div>
+    <div class="field"><label for="rate">Vitesse</label>
+      <div class="range"><input type="range" id="rate" min="0.6" max="1.8" step="0.05"><span id="rateVal"></span></div></div>
+    <div class="btns"><button id="testVoice">Écouter un essai</button></div>
+    <div class="switch"><label for="readEpi">Lire les épigraphes</label><input type="checkbox" id="readEpi"></div>
+    <div class="switch"><label for="autoNext">Enchaîner sur le chapitre suivant</label><input type="checkbox" id="autoNext"></div>
+  </div>
+
+  <div class="card">
+    <h2>Données sur cet appareil</h2>
+    <p>Les chapitres sont gardés sur le téléphone pour la lecture hors ligne.</p>
+    <div class="btns"><button id="redownload">Retélécharger tous les chapitres</button><button id="clearHistory">Effacer l'historique</button></div>
+    <div class="btns" id="confirmClear" hidden><span>Effacer toute la progression ?</span><button id="clearNo">Annuler</button><button class="primary" id="clearYes">Effacer</button></div>
+  </div>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="parse.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
