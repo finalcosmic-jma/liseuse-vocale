@@ -461,7 +461,8 @@ $('next').onclick = () => jumpSentence(1);
 $('nextChBtn').onclick = async () => { if (!item || !item.next) return; const was = playing; await openItem(item.next); if (was) speakFrom(0); };
 $('text').addEventListener('click', e => {
   const w = e.target.closest('.w'); if (!w) return;
-  const sel = window.getSelection && String(window.getSelection()); if (sel && sel.length > 1) return;
+  const sel = window.getSelection && window.getSelection();
+  if (sel && String(sel).length > 1) { sel.removeAllRanges(); return; } // premier toucher : enlève la sélection
   speakFrom(+w.dataset.i);
 });
 $('bar').addEventListener('click', e => {
@@ -480,6 +481,15 @@ document.addEventListener('keydown', e => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) saveProgress(true); else if (playing) keepAwake(true);
 });
+
+/* Tout sélectionner : sélectionne le chapitre affiché et le copie */
+$('selectBtn').onclick = async () => {
+  const box = $('text'), sel = window.getSelection();
+  const r = document.createRange(); r.selectNodeContents(box);
+  sel.removeAllRanges(); sel.addRange(r);
+  try { await navigator.clipboard.writeText(box.innerText.trim()); toast('Chapitre sélectionné et copié'); }
+  catch (e) { toast('Chapitre sélectionné'); }
+};
 
 /* Taille du texte */
 const SIZES = [1, 1.15, 1.3, 1.5];
