@@ -462,7 +462,7 @@ $('nextChBtn').onclick = async () => { if (!item || !item.next) return; const wa
 $('text').addEventListener('click', e => {
   const w = e.target.closest('.w'); if (!w) return;
   const sel = window.getSelection && window.getSelection();
-  if (sel && String(sel).length > 1) { sel.removeAllRanges(); return; } // premier toucher : enlève la sélection
+  if (sel && String(sel).length > 1) return; // texte sélectionné : on laisse le menu d'iOS s'afficher
   speakFrom(+w.dataset.i);
 });
 $('bar').addEventListener('click', e => {
@@ -482,13 +482,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) saveProgress(true); else if (playing) keepAwake(true);
 });
 
-/* Tout sélectionner : sélectionne le chapitre affiché et le copie */
-$('selectBtn').onclick = async () => {
-  const box = $('text'), sel = window.getSelection();
-  const r = document.createRange(); r.selectNodeContents(box);
+/* Tout sélectionner : sélectionne le chapitre pour pouvoir utiliser « Énoncer » d'iOS */
+$('selectBtn').onclick = () => {
+  if (playing) pause();
+  const sel = window.getSelection(), r = document.createRange();
+  r.selectNodeContents($('text'));
   sel.removeAllRanges(); sel.addRange(r);
-  try { await navigator.clipboard.writeText(box.innerText.trim()); toast('Chapitre sélectionné et copié'); }
-  catch (e) { toast('Chapitre sélectionné'); }
+  toast('Texte sélectionné · touche-le pour afficher « Énoncer »');
 };
 
 /* Taille du texte */

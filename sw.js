@@ -1,6 +1,6 @@
 /* Liseuse vocale — mode hors ligne. Les chapitres sont gardés dans IndexedDB par l'appli ;
    ce fichier garde seulement l'appli elle-même et ses polices. GitHub n'est jamais mis en cache ici. */
-const VERSION = 'lv-2';
+const VERSION = 'lv-3';
 const SHELL = ['./', 'index.html', 'app.js', 'parse.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
